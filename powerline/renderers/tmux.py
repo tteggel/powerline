@@ -45,9 +45,13 @@ class TmuxRenderer(Renderer):
 		if segment_info:
 			r.update(segment_info)
 		if 'pane_id' in r:
-			varname = 'TMUX_PWD_' + r['pane_id'].lstrip('%')
+			pane_id = r['pane_id'].lstrip('%')
+			varname = 'TMUX_PWD_' + pane_id
 			if varname in r['environ']:
 				r['getcwd'] = lambda: r['environ'][varname]
+			venvvar = 'TMUX_VENV_' + pane_id
+			if venvvar in r['environ']:
+				r['venv'] = r['environ'][venvvar]
 		return r
 
 
