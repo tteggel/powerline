@@ -5,13 +5,14 @@ import sys
 
 class Pl(object):
 	def __init__(self):
+		self.exceptions = []
 		self.errors = []
 		self.warns = []
 		self.debugs = []
 		self.prefix = None
 		self.use_daemon_threads = True
 
-	for meth in ('error', 'warn', 'debug'):
+	for meth in ('error', 'warn', 'debug', 'exception'):
 		exec (('def {0}(self, msg, *args, **kwargs):\n'
 				'	self.{0}s.append((kwargs.get("prefix") or self.prefix, msg, args, kwargs))\n').format(meth))
 
@@ -76,23 +77,29 @@ def new_module(name, **kwargs):
 
 
 class AttrReplace(object):
-	def __init__(self, obj, attr, new):
+	def __init__(self, obj, *args):
 		self.obj = obj
-		self.attr = attr
-		self.new = new
+		self.attrs = args[::2]
+		self.new = args[1::2]
 
 	def __enter__(self):
-		try:
-			self.old = getattr(self.obj, self.attr)
-		except AttributeError:
-			pass
-		setattr(self.obj, self.attr, self.new)
+		self.old = {}
+		for i, attr in enumerate(self.attrs):
+			try:
+				self.old[i] = getattr(self.obj, attr)
+			except AttributeError:
+				pass
+		for attr, new in zip(self.attrs, self.new):
+			setattr(self.obj, attr, new)
 
 	def __exit__(self, *args):
-		try:
-			setattr(self.obj, self.attr, self.old)
-		except AttributeError:
-			delattr(self.obj, self.attr)
+		for i, attr in enumerate(self.attrs):
+			try:
+				old = self.old[i]
+			except KeyError:
+				delattr(self.obj, attr)
+			else:
+				setattr(self.obj, attr, old)
 
 
 replace_attr = AttrReplace
